@@ -1,0 +1,7 @@
+{
+  "name": "Remix: Remix: Mind Garden: A Smart Start Preschool",
+  "description": "A smart start preschool platform for collecting daily child observations and generating AI-powered personalised reports.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
