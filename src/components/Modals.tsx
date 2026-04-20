@@ -4,12 +4,14 @@ import { X, FileText, Sparkles, AlertTriangle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cn } from '../lib/utils';
 import { useAppContext } from '../context/AppContext';
+import { useNavigate } from 'react-router-dom';
 
 export function PastReportsModal() {
+  const navigate = useNavigate();
   const { 
     viewingReportsForStudent, setViewingReportsForStudent, 
     reports, setCurrentReport, setSelectedStudent, 
-    setScreen, generatePeriodicReport 
+    generatePeriodicReport 
   } = useAppContext();
 
   return (
@@ -44,7 +46,7 @@ export function PastReportsModal() {
             
             <div className="flex-1 overflow-y-auto p-8 space-y-4">
               {reports.filter(r => r.studentId === viewingReportsForStudent.id).length > 0 ? (
-                reports.filter(r => r.studentId === viewingReportsForStudent.id).map(report => (
+                reports.filter(r => r.studentId === viewingReportsForStudent.id).slice().reverse().map(report => (
                   <div key={report.id} className="bg-stone-50 border border-stone-100 rounded-2xl p-6 flex items-center justify-between hover:border-emerald-200 transition-all group">
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-1">
@@ -57,7 +59,7 @@ export function PastReportsModal() {
                       onClick={() => {
                         setCurrentReport(report);
                         setSelectedStudent(viewingReportsForStudent);
-                        setScreen('report');
+                        navigate('/report');
                         setViewingReportsForStudent(null);
                       }}
                       className="bg-white text-stone-600 px-4 py-2 rounded-xl border border-stone-200 font-bold text-xs hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all flex items-center gap-2"

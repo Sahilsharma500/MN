@@ -632,7 +632,13 @@ export default function AdminScreen() {
 
           <div className="grid gap-4">
             {students.filter(s => s.class === selectedAdminSection.name).map((student) => {
-              const studentReports = reports.filter(r => r.studentId === student.id);
+              const studentReports = reports
+                .filter(r => r.studentId === student.id)
+                .sort((a, b) => {
+                  const dateA = a.createdAt ? new Date(a.createdAt).getTime() : new Date(a.startDate).getTime();
+                  const dateB = b.createdAt ? new Date(b.createdAt).getTime() : new Date(b.startDate).getTime();
+                  return dateB - dateA;
+                });
               return (
                 <div key={student.id} className="bg-white border border-stone-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
@@ -650,25 +656,18 @@ export default function AdminScreen() {
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <div className="flex -space-x-2">
-                      {studentReports.slice(0, 3).map((r, i) => (
+                    <div className="flex">
+                      {studentReports.slice(0, 1).map((r) => (
                         <button 
                           key={r.id} 
                           onClick={() => { setCurrentReport(r); setSelectedStudent(student); navigate('/report'); }}
-                          className="w-8 h-8 rounded-full bg-emerald-50 border-2 border-white flex items-center justify-center text-emerald-600 shadow-sm hover:bg-emerald-100 transition-all" 
+                          className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl font-bold text-xs hover:bg-emerald-100 transition-all flex items-center gap-2 border border-emerald-100 uppercase" 
                           title={`Report from ${format(parseISO(r.startDate), 'MMM d')}`}
                         >
-                          <FileText size={12} />
+                          <FileText size={14} />
+                          {r.status}
                         </button>
                       ))}
-                      {studentReports.length > 3 && (
-                        <button 
-                          onClick={() => setViewingReportsForStudent(student)}
-                          className="w-8 h-8 rounded-full bg-stone-100 border-2 border-white flex items-center justify-center text-stone-500 text-[10px] font-bold hover:bg-stone-200 transition-all"
-                        >
-                          +{studentReports.length - 3}
-                        </button>
-                      )}
                     </div>
                     <button 
                       onClick={() => generatePeriodicReport(student)}

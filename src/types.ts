@@ -49,6 +49,7 @@ export interface GeneratedReport {
   recommendations: string;
   status: 'draft' | 'final';
   images?: string[];
+  createdAt?: string;
 }
 
 export const DIMENSIONS = [

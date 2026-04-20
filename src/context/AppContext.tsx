@@ -158,7 +158,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         content: r.content,
         recommendations: r.recommendations,
         status: r.status,
-        images: r.images
+        images: r.images,
+        createdAt: r.createdAt
       })));
     } catch (error) {
       console.error("Failed to fetch data:", error);
