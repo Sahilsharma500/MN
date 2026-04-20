@@ -6,6 +6,12 @@ export interface Teacher {
   designation: string;
 }
 
+export interface Section {
+  id: string;
+  name: string;
+  assignedTeacherId?: string;
+}
+
 export interface Student {
   id: string;
   studentId: string;
