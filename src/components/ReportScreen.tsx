@@ -3,8 +3,7 @@ import { motion } from 'motion/react';
 import { Loader2, CheckCircle2, TreePine as Tree, User, Calendar, Image as ImageIcon, Sparkles, Save, Edit3, Heart, Download, Share2, Send } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
-import { jsPDF } from 'jspdf';
-import * as htmlToImage from 'html-to-image';
+import html2pdf from 'html2pdf.js';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
@@ -21,110 +20,17 @@ export default function ReportScreen() {
   const reportRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
 
-  const getParsedContent = (content: string) => {
-    const match = content.match(/\n(#{1,3}\s+\*?(?:Our Journey Together|Dimension Analysis)\*?|\*\*Our Journey Together\*\*|\*\*Dimension Analysis\*\*)/i);
-    if (match && match.index !== undefined) {
-      return {
-        page1Content: content.substring(0, match.index).trim(),
-        page2Content: content.substring(match.index).trim()
-      };
-    }
-    return { page1Content: content, page2Content: null };
+  const parsed = true; // Kept for minimal structural changes to conditional rendering
+
+  const downloadReportAsPDF = () => {
+    window.print();
   };
 
-  const parsed = currentReport ? getParsedContent(currentReport.content) : null;
-
-  const pdfLogic = async (isShare: boolean = false) => {
-    if (!reportRef.current || !selectedStudent || !currentReport) return;
-    setIsExporting(true);
-    
-    try {
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      
-      const captureAndAddPage = async (elementId: string, isFirstPage: boolean) => {
-        const pageEl = document.getElementById(elementId);
-        if (!pageEl) return;
-        
-        const imgData = await htmlToImage.toPng(pageEl, {
-          backgroundColor: '#ffffff',
-          style: {
-            borderRadius: '0px',
-            boxShadow: 'none',
-            margin: '0',
-          }
-        });
-        
-        const img = new Image();
-        img.src = imgData;
-        await new Promise(resolve => img.onload = resolve);
-        
-        let drawWidth = pageWidth;
-        let drawHeight = (img.height * pageWidth) / img.width;
-        
-        if (drawHeight > pageHeight) {
-          const ratio = pageHeight / drawHeight;
-          drawHeight = drawHeight * ratio * 0.98;
-          drawWidth = drawWidth * ratio * 0.98;
-        }
-        
-        if (!isFirstPage) {
-          pdf.addPage();
-        }
-        
-        pdf.setFillColor(255, 255, 255);
-        pdf.rect(0, 0, pageWidth, pageHeight, 'F');
-        
-        const xPos = (pageWidth - drawWidth) / 2;
-        const yPos = 5; // small top margin
-        
-        pdf.addImage(imgData, 'PNG', xPos, yPos, drawWidth, drawHeight);
-      };
-
-      const buttons = document.querySelectorAll('button');
-      buttons.forEach(btn => btn.style.display = 'none');
-
-      await captureAndAddPage('pdf-page-1', true);
-      const p2 = document.getElementById('pdf-page-2');
-      if (p2) await captureAndAddPage('pdf-page-2', false);
-      const p3 = document.getElementById('pdf-page-3');
-      if (p3) await captureAndAddPage('pdf-page-3', false);
-
-      buttons.forEach(btn => btn.style.display = '');
-
-      const fileName = `MindGarden_Report_${selectedStudent.name.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.pdf`;
-      
-      if (!isShare) {
-        pdf.save(fileName);
-      } else {
-        const pdfBlob = pdf.output('blob');
-        const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: `${selectedStudent.name}'s Progress Report`,
-            text: `Please find the progress report for ${selectedStudent.name}.`,
-          });
-        } else {
-          const message = `*Mind Garden: A Smart Start Preschool Progress Report*\n\n*Student:* ${selectedStudent.name}\n*Class:* ${selectedStudent.class}\nHello! I've generated the latest progress report for ${selectedStudent.name}. Please download the PDF from the portal.`;
-          const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-          window.open(whatsappUrl, '_blank');
-          alert("Direct PDF sharing is not supported in this browser. A WhatsApp message has been prepared, but you will need to download and attach the PDF manually.");
-        }
-      }
-    } catch (error) {
-      console.error("PDF/Share Error:", error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      alert(`Failed to process report: ${errorMessage}\n\nThis is often due to unsupported CSS features in the browser's capture engine.`);
-    } finally {
-      setIsExporting(false);
-    }
+  const shareReport = () => {
+    const message = `*Mind Garden: A Smart Start Preschool Progress Report*\n\n*Student:* ${selectedStudent.name}\n*Class:* ${selectedStudent.class}\nHello! I've generated the latest progress report for ${selectedStudent.name}. Please download the PDF and attach it to this message.`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
   };
-
-  const downloadReportAsPDF = () => pdfLogic(false);
-  const shareReport = () => pdfLogic(true);
 
   if (!selectedStudent) return null;
 
@@ -278,47 +184,39 @@ export default function ReportScreen() {
                   </div>
                 ) : (
                   <div className="markdown-body">
-                    <ReactMarkdown>{parsed.page1Content}</ReactMarkdown>
+                    <ReactMarkdown>{currentReport.content}</ReactMarkdown>
                   </div>
                 )}
               </section>
+
+              {/* Merged Teacher Recommendations Section */}
+              {!isEditingReport && (
+                <section className="space-y-6 pt-8 border-t border-stone-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                      <Heart size={20} />
+                    </div>
+                    <h4 className="text-lg font-serif italic text-stone-800">Teacher's Closing Recommendations</h4>
+                  </div>
+                  <div className="markdown-body italic font-medium text-emerald-800 mb-8">
+                    <ReactMarkdown>{currentReport.recommendations}</ReactMarkdown>
+                  </div>
+                  
+                  <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-emerald-900 text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-emerald-900/20">
+                        {currentTeacher?.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-stone-800 font-bold text-lg">{currentTeacher?.name}</p>
+                        <p className="text-stone-500 text-sm">Lead Educator, {selectedStudent.class}</p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
             </div>
           </div>
-
-          {/* PAGE 2 */}
-          {!isEditingReport && parsed.page2Content && (
-            <div id="pdf-page-2" className="bg-white border border-stone-200 rounded-[2rem] p-8 md:p-12 shadow-2xl shadow-stone-200/50">
-              <div className="markdown-body">
-                <ReactMarkdown>{parsed.page2Content}</ReactMarkdown>
-              </div>
-            </div>
-          )}
-
-          {/* PAGE 3 */}
-          {!isEditingReport && (
-            <div id="pdf-page-3" className="bg-white border border-emerald-200 rounded-[2rem] p-8 md:p-12 shadow-2xl shadow-stone-200/50 bg-gradient-to-br from-emerald-50 to-stone-50 overflow-hidden relative">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-200/30 rounded-full -mr-16 -mt-16 blur-2xl" />
-              <h3 className="text-xl font-serif italic text-emerald-900 mb-6 flex items-center gap-3">
-                <Heart size={24} className="text-emerald-500" />
-                Teacher's Closing Recommendations
-              </h3>
-              <div className="markdown-body italic font-medium text-emerald-800 mb-12">
-                <ReactMarkdown>{currentReport.recommendations}</ReactMarkdown>
-              </div>
-              
-              <div className="pt-10 border-t border-emerald-900/10 flex flex-col md:flex-row justify-between items-center gap-8">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-emerald-900 text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-emerald-900/20">
-                    {currentTeacher?.name.charAt(0)}
-                  </div>
-                  <div>
-                    <p className="text-stone-800 font-bold text-lg">{currentTeacher?.name}</p>
-                    <p className="text-stone-500 text-sm">Lead Educator, {selectedStudent.class}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Export Buttons */}
           {!isEditingReport && (
