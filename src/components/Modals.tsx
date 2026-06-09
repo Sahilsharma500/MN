@@ -129,8 +129,12 @@ export function DeleteConfirmationModal() {
               </h3>
               <p className="text-stone-500">
                 {deleteConfirmation.step === 1 
-                  ? `You are about to delete this ${deleteConfirmation.type}. This action cannot be undone.`
-                  : `This is your LAST warning. Deleting this ${deleteConfirmation.type} will remove all associated data.`}
+                  ? (deleteConfirmation.type === 'section'
+                      ? "You are about to delete this section. ALL students assigned to this section will also be permanently deleted. This action cannot be undone."
+                      : `You are about to delete this ${deleteConfirmation.type}. This action cannot be undone.`)
+                  : (deleteConfirmation.type === 'section'
+                      ? "This is your LAST warning. Deleting this section will permanently remove the section and all students assigned to it."
+                      : `This is your LAST warning. Deleting this ${deleteConfirmation.type} will remove all associated data.`)}
               </p>
             </div>
 

@@ -60,8 +60,8 @@ interface AppContextType {
   setNewTeacher: React.Dispatch<React.SetStateAction<{ name: string; code: string; department: string; designation: string }>>;
   newStudent: { studentId: string; name: string; rollNumber: string; guardianName: string; class: string; assignedTeacherId: string };
   setNewStudent: React.Dispatch<React.SetStateAction<{ studentId: string; name: string; rollNumber: string; guardianName: string; class: string; assignedTeacherId: string }>>;
-  deleteConfirmation: { id: string; type: 'teacher' | 'student'; step: 1 | 2 } | null;
-  setDeleteConfirmation: React.Dispatch<React.SetStateAction<{ id: string; type: 'teacher' | 'student'; step: 1 | 2 } | null>>;
+  deleteConfirmation: { id: string; type: 'teacher' | 'student' | 'section'; step: 1 | 2 } | null;
+  setDeleteConfirmation: React.Dispatch<React.SetStateAction<{ id: string; type: 'teacher' | 'student' | 'section'; step: 1 | 2 } | null>>;
   editingTeacherClass: { teacherId: string; currentClasses: string[] } | null;
   setEditingTeacherClass: React.Dispatch<React.SetStateAction<{ teacherId: string; currentClasses: string[] } | null>>;
   newClassName: string;
@@ -72,7 +72,7 @@ interface AppContextType {
   handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleAutoAssignUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   addStudentManually: () => void;
-  initiateDelete: (id: string, type: 'teacher' | 'student') => void;
+  initiateDelete: (id: string, type: 'teacher' | 'student' | 'section') => void;
   confirmDelete: () => void;
   saveTeacherClassChange: () => void;
   
@@ -195,7 +195,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [adminTab, setAdminTab] = useState<'dashboard' | 'teachers' | 'students'>('dashboard');
   const [newTeacher, setNewTeacher] = useState({ name: '', code: '', department: '', designation: '' });
   const [newStudent, setNewStudent] = useState({ studentId: '', name: '', rollNumber: '', guardianName: '', class: '', assignedTeacherId: '' });
-  const [deleteConfirmation, setDeleteConfirmation] = useState<{ id: string, type: 'teacher' | 'student', step: 1 | 2 } | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ id: string, type: 'teacher' | 'student' | 'section', step: 1 | 2 } | null>(null);
   const [editingTeacherClass, setEditingTeacherClass] = useState<{ teacherId: string, currentClasses: string[] } | null>(null);
   const [newClassName, setNewClassName] = useState('');
 
@@ -357,7 +357,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // Deprecated. Handled directly inside AdminScreen.
   };
 
-  const initiateDelete = (id: string, type: 'teacher' | 'student') => {
+  const initiateDelete = (id: string, type: 'teacher' | 'student' | 'section') => {
     setDeleteConfirmation({ id, type, step: 1 });
   };
 
@@ -374,6 +374,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
              const message = await res.text();
              alert(`Failed to delete teacher: ${message}`);
              return;
+          }
+        } else if (deleteConfirmation.type === 'section') {
+          const res = await fetch(`${API_URL}/api/sections/${deleteConfirmation.id}`, { method: 'DELETE' });
+          if (!res.ok) {
+             const message = await res.text();
+             alert(`Failed to delete section: ${message}`);
+             return;
+          }
+          // Reset selected admin section if the currently viewed section was deleted
+          if (selectedAdminSection?.id === deleteConfirmation.id) {
+            setSelectedAdminSection(null);
           }
         } else {
           const res = await fetch(`${API_URL}/api/students/${deleteConfirmation.id}`, { method: 'DELETE' });

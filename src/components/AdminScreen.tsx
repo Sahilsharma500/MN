@@ -480,14 +480,26 @@ export default function AdminScreen() {
             {sections.map((section) => {
               const studentsInSection = students.filter(s => s.class === section.name);
               return (
-                <button 
+                <div 
                   key={section.id}
                   onClick={() => setSelectedAdminSection(section)}
-                  className="bg-white border border-stone-200 rounded-2xl p-6 flex flex-col text-left hover:border-emerald-500 transition-all group shadow-sm hover:shadow-md"
+                  className="bg-white border border-stone-200 rounded-2xl p-6 flex justify-between items-start text-left hover:border-emerald-500 transition-all group shadow-sm hover:shadow-md cursor-pointer"
                 >
-                  <h4 className="font-bold text-xl text-stone-800 group-hover:text-emerald-700 transition-colors">{section.name}</h4>
-                  <p className="text-sm font-medium text-stone-500 mt-2">{studentsInSection.length} Students</p>
-                </button>
+                  <div>
+                    <h4 className="font-bold text-xl text-stone-800 group-hover:text-emerald-700 transition-colors">{section.name}</h4>
+                    <p className="text-sm font-medium text-stone-500 mt-2">{studentsInSection.length} Students</p>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      initiateDelete(section.id, 'section');
+                    }}
+                    className="p-2 text-stone-300 hover:text-rose-500 transition-colors self-start"
+                    title="Delete Section"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -506,6 +518,13 @@ export default function AdminScreen() {
                 ←
               </button>
               <h3 className="text-xl font-bold text-stone-700">Manage Students: <span className="text-emerald-600 italic">{selectedAdminSection.name}</span></h3>
+              <button
+                onClick={() => initiateDelete(selectedAdminSection.id, 'section')}
+                className="p-2 text-stone-400 hover:text-rose-500 transition-colors"
+                title="Delete Section"
+              >
+                <Trash2 size={20} />
+              </button>
             </div>
             
             <div className="flex gap-2">
