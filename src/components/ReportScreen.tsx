@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { Loader2, CheckCircle2, TreePine as Tree, User, Calendar, Image as ImageIcon, Sparkles, Save, Edit3, Heart, Download, Share2, Send } from 'lucide-react';
+import { Loader2, CheckCircle2, User, Calendar, Image as ImageIcon, Sparkles, Save, Edit3, Heart, Download, Share2, Send } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import html2pdf from 'html2pdf.js';
@@ -86,7 +86,7 @@ export default function ReportScreen() {
                   </div>
                   <div className="text-center md:text-left">
                     <div className="flex items-center gap-2 mb-2 justify-center md:justify-start">
-                      <Tree size={16} className="text-emerald-300" />
+                      <img src="/logo.png" alt="Mind Garden Logo" className="w-5 h-5 object-contain" />
                       <p className="text-emerald-300 text-[10px] font-bold uppercase tracking-[0.3em]">Mind Garden: A Smart Start Preschool</p>
                     </div>
                     <h3 className="text-4xl font-serif italic mb-2">{selectedStudent.name}</h3>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, Link } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
-import { LogOut, TreePine as Tree, Sparkles, LayoutDashboard, User, FileText } from 'lucide-react';
+import { LogOut, Sparkles, LayoutDashboard, User, FileText } from 'lucide-react';
 import { cn } from './lib/utils';
 import { AppProvider, useAppContext } from './context/AppContext';
 
@@ -36,9 +36,7 @@ function AppUI() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-stone-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
-            <Tree size={24} />
-          </div>
+          <img src="/logo.png" alt="Mind Garden Logo" className="w-10 h-10 object-contain" />
           <div>
             <h1 className="text-lg font-bold tracking-tight text-emerald-900 leading-none">Mind Garden</h1>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-600 mt-1">A Smart Start Preschool</p>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { TreePine as Tree, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext, ADMIN_PASSWORD } from '../context/AppContext';
@@ -19,9 +19,7 @@ export default function LoginScreen() {
       className="space-y-8 text-center"
     >
       <div className="space-y-4">
-        <div className="w-24 h-24 bg-emerald-600 rounded-[2rem] flex items-center justify-center text-white mx-auto shadow-2xl shadow-emerald-200">
-          <Tree size={48} />
-        </div>
+        <img src="/logo.png" alt="Mind Garden Logo" className="w-24 h-24 object-contain mx-auto" />
         <div className="space-y-1">
           <h2 className="text-4xl font-serif italic text-stone-800">Mind Garden</h2>
           <p className="text-xs font-bold uppercase tracking-[0.3em] text-emerald-600">A Smart Start Preschool</p>
