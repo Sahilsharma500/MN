@@ -85,8 +85,10 @@ interface AppContextType {
   toggleTag: (tag: string) => void;
   setDimensionRating: (dimId: keyof ObservationData['dimensions'], rating: number) => void;
   generatePeriodicReport: (studentOverride?: Student) => Promise<void>;
-  generateAllReports: () => Promise<void>;
+  generateReportsForStudents: (studentList: Student[]) => Promise<void>;
   refreshData: () => Promise<void>;
+  fetchFullReport: (id: string) => Promise<GeneratedReport>;
+  loadingReportId: string | null;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -97,6 +99,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [loadingReportId, setLoadingReportId] = useState<string | null>(null);
 
   const fetchAllData = async () => {
     setIsLoadingData(true);
@@ -114,53 +117,73 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const obsData = await obsRes.json();
       const repData = await repRes.json();
 
-      setSections(sectData.map((s: any) => ({
-        id: s._id,
-        name: s.name,
-        assignedTeacherId: s.teacher?._id || s.teacher || undefined
-      })));
+      if (Array.isArray(sectData)) {
+        setSections(sectData.map((s: any) => ({
+          id: s._id,
+          name: s.name,
+          assignedTeacherId: s.teacher?._id || s.teacher || undefined
+        })));
+      } else {
+        console.error("Sections data is not an array:", sectData);
+      }
 
-      setTeachers(teachData.map((t: any) => ({
-        id: t._id,
-        name: t.name,
-        code: t.employeeId,
-        department: t.department || '',
-        designation: t.designation || ''
-      })));
+      if (Array.isArray(teachData)) {
+        setTeachers(teachData.map((t: any) => ({
+          id: t._id,
+          name: t.name,
+          code: t.employeeId,
+          department: t.department || '',
+          designation: t.designation || ''
+        })));
+      } else {
+        console.error("Teachers data is not an array:", teachData);
+      }
 
-      setStudents(studData.map((st: any) => ({
-        id: st._id,
-        studentId: st.studentId,
-        name: st.name,
-        avatar: `https://picsum.photos/seed/${st._id}/100`,
-        rollNumber: st.rollNumber || '',
-        guardianName: st.guardianName || '',
-        class: st.section?.name || '',
-        assignedTeacherId: st.section?.teacher?._id || st.section?.teacher || ''
-      })));
+      if (Array.isArray(studData)) {
+        setStudents(studData.map((st: any) => ({
+          id: st._id,
+          studentId: st.studentId,
+          name: st.name,
+          avatar: `https://picsum.photos/seed/${st._id}/100`,
+          rollNumber: st.rollNumber || '',
+          guardianName: st.guardianName || '',
+          class: st.section?.name || '',
+          assignedTeacherId: st.section?.teacher?._id || st.section?.teacher || ''
+        })));
+      } else {
+        console.error("Students data is not an array:", studData);
+      }
 
-      setObservations(obsData.map((o: any) => ({
-        studentId: o.studentId?._id || o.studentId,
-        date: o.date,
-        mood: o.mood,
-        dimensions: o.dimensions,
-        tags: o.tags,
-        highlight: o.highlight,
-        photo: o.photo
-      })));
+      if (Array.isArray(obsData)) {
+        setObservations(obsData.map((o: any) => ({
+          studentId: o.studentId?._id || o.studentId,
+          date: o.date,
+          mood: o.mood,
+          dimensions: o.dimensions,
+          tags: o.tags,
+          highlight: o.highlight,
+          photo: o.photo
+        })));
+      } else {
+        console.error("Observations data is not an array:", obsData);
+      }
 
-      setReports(repData.map((r: any) => ({
-        id: r._id,
-        studentId: r.studentId?._id || r.studentId,
-        teacherId: r.teacherId?._id || r.teacherId,
-        startDate: r.startDate,
-        endDate: r.endDate,
-        content: r.content,
-        recommendations: r.recommendations,
-        status: r.status,
-        images: r.images,
-        createdAt: r.createdAt
-      })));
+      if (Array.isArray(repData)) {
+        setReports(repData.map((r: any) => ({
+          id: r._id,
+          studentId: r.studentId?._id || r.studentId,
+          teacherId: r.teacherId?._id || r.teacherId,
+          startDate: r.startDate,
+          endDate: r.endDate,
+          content: r.content,
+          recommendations: r.recommendations,
+          status: r.status,
+          images: r.images,
+          createdAt: r.createdAt
+        })));
+      } else {
+        console.error("Reports data is not an array:", repData);
+      }
     } catch (error) {
       console.error("Failed to fetch data:", error);
     } finally {
@@ -431,20 +454,37 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setCurrentTeacher(teacher);
   };
 
-  const handleStudentSelect = (student: Student) => {
+  const handleStudentSelect = async (student: Student) => {
     setSelectedStudent(student);
     const existingObs = dailyObservations.find(o => o.studentId === student.id);
+    
+    setFormData({
+      studentId: student.id,
+      date: selectedDate.toISOString(),
+      mood: existingObs?.mood || '',
+      dimensions: existingObs?.dimensions || { emotional: 0, social: 0, cognitive: 0, physical: 0, creative: 0 },
+      tags: existingObs?.tags || [],
+      highlight: existingObs?.highlight || '',
+      photo: '', // initially empty, load on-demand
+    });
+
     if (existingObs) {
-      setFormData(existingObs);
-    } else {
-      setFormData({
-        studentId: student.id,
-        date: selectedDate.toISOString(),
-        mood: '',
-        dimensions: { emotional: 0, social: 0, cognitive: 0, physical: 0, creative: 0 },
-        tags: [],
-        highlight: '',
-      });
+      try {
+        const res = await fetch(`${API_URL}/api/observations/single?studentId=${student.id}&date=${selectedDate.toISOString()}`);
+        if (res.ok) {
+          const fullObs = await res.json();
+          if (fullObs && fullObs.photo) {
+            setFormData(prev => {
+              if (prev.studentId === student.id) {
+                return { ...prev, photo: fullObs.photo };
+              }
+              return prev;
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load photo on-demand:", e);
+      }
     }
   };
 
@@ -528,13 +568,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
 
 
-  const generateAllReports = async () => {
+  const generateReportsForStudents = async (studentList: Student[]) => {
     setIsGenerating(true);
     try {
       const endDate = selectedDate;
       const startDate = subDays(endDate, 13);
       
-      for (const student of students) {
+      for (const student of studentList) {
         const payload = {
           studentId: student.id,
           startDate: startDate.toISOString(),
@@ -550,9 +590,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           const savedReport = await res.json();
           if (!res.ok) {
              console.error(`Backend failed for ${student.name}: ${savedReport.message}`);
+             // If it failed for a reason other than "no observations found" (e.g. rate limit), wait a bit
+             if (savedReport.message && !savedReport.message.includes('No observations found')) {
+               await new Promise(resolve => setTimeout(resolve, 4000));
+             }
+          } else {
+             // Successful AI generation, wait 4 seconds to stay under 15 RPM (1 request / 4 seconds)
+             await new Promise(resolve => setTimeout(resolve, 4000));
           }
         } catch (e: any) {
           console.error(`Network or fetch failed for ${student.name}`, e);
+          // Wait on network/fetch failures as well
+          await new Promise(resolve => setTimeout(resolve, 4000));
         }
       }
       await fetchAllData();
@@ -560,6 +609,31 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       alert(`Bulk Generation Error: ${err.message}`);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const fetchFullReport = async (id: string): Promise<GeneratedReport> => {
+    setLoadingReportId(id);
+    try {
+      const res = await fetch(`${API_URL}/api/reports/${id}`);
+      if (!res.ok) {
+        throw new Error('Failed to fetch full report');
+      }
+      const reportData = await res.json();
+      return {
+        id: reportData._id,
+        studentId: reportData.studentId?._id || reportData.studentId,
+        teacherId: reportData.teacherId?._id || reportData.teacherId,
+        startDate: reportData.startDate,
+        endDate: reportData.endDate,
+        content: reportData.content,
+        recommendations: reportData.recommendations,
+        status: reportData.status,
+        images: reportData.images,
+        createdAt: reportData.createdAt
+      };
+    } finally {
+      setLoadingReportId(null);
     }
   };
 
@@ -592,8 +666,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       initiateDelete, confirmDelete, saveTeacherClassChange,
       dailyObservations, filteredStudents, getStudentStatus,
       handleTeacherSelect, handleStudentSelect, saveObservation,
-      toggleTag, setDimensionRating, generatePeriodicReport, generateAllReports,
-      refreshData: fetchAllData
+      toggleTag, setDimensionRating, generatePeriodicReport, generateReportsForStudents,
+      refreshData: fetchAllData,
+      fetchFullReport,
+      loadingReportId
     }}>
       {children}
     </AppContext.Provider>

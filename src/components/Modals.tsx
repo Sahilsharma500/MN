@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, FileText, Sparkles, AlertTriangle } from 'lucide-react';
+import { X, FileText, Sparkles, AlertTriangle, Loader2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cn } from '../lib/utils';
 import { useAppContext } from '../context/AppContext';
@@ -11,7 +11,7 @@ export function PastReportsModal() {
   const { 
     viewingReportsForStudent, setViewingReportsForStudent, 
     reports, setCurrentReport, setSelectedStudent, 
-    generatePeriodicReport 
+    generatePeriodicReport, fetchFullReport, loadingReportId
   } = useAppContext();
 
   return (
@@ -56,16 +56,26 @@ export function PastReportsModal() {
                       <p className="text-xs text-stone-400 mt-1">Status: <span className="text-emerald-600 font-bold uppercase">{report.status}</span></p>
                     </div>
                     <button 
-                      onClick={() => {
-                        setCurrentReport(report);
-                        setSelectedStudent(viewingReportsForStudent);
-                        navigate('/report');
-                        setViewingReportsForStudent(null);
+                      onClick={async () => {
+                        try {
+                          const fullReport = await fetchFullReport(report.id);
+                          setCurrentReport(fullReport);
+                          setSelectedStudent(viewingReportsForStudent);
+                          navigate('/report');
+                          setViewingReportsForStudent(null);
+                        } catch (error) {
+                          alert("Failed to load report narrative and images.");
+                        }
                       }}
-                      className="bg-white text-stone-600 px-4 py-2 rounded-xl border border-stone-200 font-bold text-xs hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all flex items-center gap-2"
+                      disabled={loadingReportId !== null}
+                      className="bg-white text-stone-600 px-4 py-2 rounded-xl border border-stone-200 font-bold text-xs hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all flex items-center gap-2 disabled:opacity-50"
                     >
-                      <FileText size={14} />
-                      View Full Report
+                      {loadingReportId === report.id ? (
+                        <Loader2 size={14} className="animate-spin text-emerald-600" />
+                      ) : (
+                        <FileText size={14} />
+                      )}
+                      {loadingReportId === report.id ? 'Loading...' : 'View Full Report'}
                     </button>
                   </div>
                 ))

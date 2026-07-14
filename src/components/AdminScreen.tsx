@@ -17,7 +17,7 @@ export default function AdminScreen() {
     teachers, setTeachers,
     students, setStudents,
     reports,
-    isGenerating, generateAllReports, generatePeriodicReport,
+    isGenerating, generateReportsForStudents, generatePeriodicReport,
     newTeacher, setNewTeacher,
     newStudent, setNewStudent,
     initiateDelete,
@@ -25,7 +25,7 @@ export default function AdminScreen() {
     newClassName, setNewClassName,
     downloadSampleExcel, handleFileUpload, handleAutoAssignUpload, addStudentManually,
     setCurrentReport, setViewingReportsForStudent,
-    setSelectedStudent, refreshData
+    setSelectedStudent, refreshData, fetchFullReport, loadingReportId
   } = useAppContext();
 
   const navigate = useNavigate();
@@ -80,14 +80,6 @@ export default function AdminScreen() {
         <div className="space-y-8">
           <div className="flex justify-between items-center">
             <h3 className="text-xl font-bold text-stone-700">School Overview</h3>
-            <button 
-              onClick={generateAllReports}
-              disabled={isGenerating}
-              className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-emerald-700 transition-all flex items-center gap-2 shadow-lg shadow-emerald-900/20 disabled:opacity-50"
-            >
-              {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-              Generate All Reports
-            </button>
           </div>
 
           <div className="bg-white border border-stone-200 rounded-[2rem] overflow-hidden shadow-sm">
@@ -379,11 +371,25 @@ export default function AdminScreen() {
                       {studentReports.slice(0, 3).map((r, i) => (
                         <button 
                           key={r.id} 
-                          onClick={() => { setCurrentReport(r); setSelectedStudent(student); navigate('/report'); }}
-                          className="w-8 h-8 rounded-full bg-emerald-50 border-2 border-white flex items-center justify-center text-emerald-600 shadow-sm hover:bg-emerald-100 transition-all" 
+                          onClick={async () => {
+                            try {
+                              const fullReport = await fetchFullReport(r.id);
+                              setCurrentReport(fullReport);
+                              setSelectedStudent(student);
+                              navigate('/report');
+                            } catch (error) {
+                              alert("Failed to load report narrative and images.");
+                            }
+                          }}
+                          disabled={loadingReportId !== null}
+                          className="w-8 h-8 rounded-full bg-emerald-50 border-2 border-white flex items-center justify-center text-emerald-600 shadow-sm hover:bg-emerald-100 transition-all disabled:opacity-50" 
                           title={`Report from ${format(parseISO(r.startDate), 'MMM d')}`}
                         >
-                          <FileText size={12} />
+                          {loadingReportId === r.id ? (
+                            <Loader2 size={12} className="animate-spin text-emerald-600" />
+                          ) : (
+                            <FileText size={12} />
+                          )}
                         </button>
                       ))}
                       {studentReports.length > 3 && (
@@ -483,11 +489,26 @@ export default function AdminScreen() {
                 <div 
                   key={section.id}
                   onClick={() => setSelectedAdminSection(section)}
-                  className="bg-white border border-stone-200 rounded-2xl p-6 flex justify-between items-start text-left hover:border-emerald-500 transition-all group shadow-sm hover:shadow-md cursor-pointer"
+                  className="bg-white border border-stone-200 rounded-2xl p-6 flex justify-between items-stretch text-left hover:border-emerald-500 transition-all group shadow-sm hover:shadow-md cursor-pointer"
                 >
-                  <div>
-                    <h4 className="font-bold text-xl text-stone-800 group-hover:text-emerald-700 transition-colors">{section.name}</h4>
-                    <p className="text-sm font-medium text-stone-500 mt-2">{studentsInSection.length} Students</p>
+                  <div className="flex flex-col justify-between items-start">
+                    <div>
+                      <h4 className="font-bold text-xl text-stone-800 group-hover:text-emerald-700 transition-colors">{section.name}</h4>
+                      <p className="text-sm font-medium text-stone-500 mt-2">{studentsInSection.length} Students</p>
+                    </div>
+                    {studentsInSection.length > 0 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          generateReportsForStudents(studentsInSection);
+                        }}
+                        disabled={isGenerating}
+                        className="mt-4 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-3 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 border border-emerald-100 disabled:opacity-50"
+                      >
+                        {isGenerating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                        Generate Reports
+                      </button>
+                    )}
                   </div>
                   <button
                     onClick={(e) => {
@@ -527,7 +548,17 @@ export default function AdminScreen() {
               </button>
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+              {students.filter(s => s.class === selectedAdminSection.name).length > 0 && (
+                <button
+                  onClick={() => generateReportsForStudents(students.filter(s => s.class === selectedAdminSection.name))}
+                  disabled={isGenerating}
+                  className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all flex items-center gap-2 shadow-sm disabled:opacity-50"
+                >
+                  {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                  Generate Reports
+                </button>
+              )}
               <select
                 value={selectedAdminSection.assignedTeacherId || ''}
                 onChange={async (e) => {
@@ -679,12 +710,26 @@ export default function AdminScreen() {
                       {studentReports.slice(0, 1).map((r) => (
                         <button 
                           key={r.id} 
-                          onClick={() => { setCurrentReport(r); setSelectedStudent(student); navigate('/report'); }}
-                          className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl font-bold text-xs hover:bg-emerald-100 transition-all flex items-center gap-2 border border-emerald-100 uppercase" 
+                          onClick={async () => {
+                            try {
+                              const fullReport = await fetchFullReport(r.id);
+                              setCurrentReport(fullReport);
+                              setSelectedStudent(student);
+                              navigate('/report');
+                            } catch (error) {
+                              alert("Failed to load report narrative and images.");
+                            }
+                          }}
+                          disabled={loadingReportId !== null}
+                          className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl font-bold text-xs hover:bg-emerald-100 transition-all flex items-center gap-2 border border-emerald-100 uppercase disabled:opacity-50" 
                           title={`Report from ${format(parseISO(r.startDate), 'MMM d')}`}
                         >
-                          <FileText size={14} />
-                          {r.status}
+                          {loadingReportId === r.id ? (
+                            <Loader2 size={14} className="animate-spin text-emerald-600" />
+                          ) : (
+                            <FileText size={14} />
+                          )}
+                          {loadingReportId === r.id ? 'Loading...' : r.status}
                         </button>
                       ))}
                     </div>
