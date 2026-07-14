@@ -574,50 +574,32 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const endDate = selectedDate;
       const startDate = subDays(endDate, 13);
       
-      if (sectionId) {
+      for (const student of studentList) {
         const payload = {
-          sectionId,
+          studentId: student.id,
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString()
         };
         
-        const res = await fetch(`${API_URL}/api/reports/generate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        
-        if (!res.ok) {
+        try {
+          const res = await fetch(`${API_URL}/api/reports/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
           const savedReport = await res.json();
-          alert(`Failed to generate section reports: ${savedReport.message || 'Unknown error'}`);
-        }
-      } else {
-        for (const student of studentList) {
-          const payload = {
-            studentId: student.id,
-            startDate: startDate.toISOString(),
-            endDate: endDate.toISOString()
-          };
-          
-          try {
-            const res = await fetch(`${API_URL}/api/reports/generate`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-            });
-            const savedReport = await res.json();
-            if (!res.ok) {
-               console.error(`Backend failed for ${student.name}: ${savedReport.message}`);
-               if (savedReport.message && !savedReport.message.includes('No observations found')) {
-                 await new Promise(resolve => setTimeout(resolve, 4000));
-               }
-            } else {
+          if (!res.ok) {
+             console.error(`Backend failed for ${student.name}: ${savedReport.message}`);
+             if (savedReport.message && !savedReport.message.includes('No observations found')) {
                await new Promise(resolve => setTimeout(resolve, 4000));
-            }
-          } catch (e: any) {
-            console.error(`Network or fetch failed for ${student.name}`, e);
-            await new Promise(resolve => setTimeout(resolve, 4000));
+             }
+          } else {
+             // Successful AI generation, wait 4 seconds to stay under 15 RPM (1 request / 4 seconds)
+             await new Promise(resolve => setTimeout(resolve, 4000));
           }
+        } catch (e: any) {
+          console.error(`Network or fetch failed for ${student.name}`, e);
+          await new Promise(resolve => setTimeout(resolve, 4000));
         }
       }
       await fetchAllData();
