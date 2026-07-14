@@ -500,12 +500,12 @@ export default function AdminScreen() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          generateReportsForStudents(studentsInSection);
+                          generateReportsForStudents(studentsInSection, section.id);
                         }}
-                        disabled={isGenerating}
+                        disabled={!!isGenerating}
                         className="mt-4 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-3 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 border border-emerald-100 disabled:opacity-50"
                       >
-                        {isGenerating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                        {isGenerating === section.id ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
                         Generate Reports
                       </button>
                     )}
@@ -551,11 +551,11 @@ export default function AdminScreen() {
             <div className="flex gap-2 flex-wrap sm:flex-nowrap">
               {students.filter(s => s.class === selectedAdminSection.name).length > 0 && (
                 <button
-                  onClick={() => generateReportsForStudents(students.filter(s => s.class === selectedAdminSection.name))}
-                  disabled={isGenerating}
+                  onClick={() => generateReportsForStudents(students.filter(s => s.class === selectedAdminSection.name), selectedAdminSection.id)}
+                  disabled={!!isGenerating}
                   className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all flex items-center gap-2 shadow-sm disabled:opacity-50"
                 >
-                  {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                  {isGenerating === selectedAdminSection.id ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
                   Generate Reports
                 </button>
               )}
@@ -735,10 +735,10 @@ export default function AdminScreen() {
                     </div>
                     <button 
                       onClick={() => generatePeriodicReport(student)}
-                      disabled={isGenerating}
+                      disabled={!!isGenerating}
                       className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl font-bold text-xs hover:bg-emerald-100 transition-all flex items-center gap-2 disabled:opacity-50"
                     >
-                      {isGenerating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                      {isGenerating === student.id ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
                       Generate
                     </button>
 

@@ -42,7 +42,7 @@ interface AppContextType {
   setSelectedStudent: React.Dispatch<React.SetStateAction<Student | null>>;
   formData: ObservationData;
   setFormData: React.Dispatch<React.SetStateAction<ObservationData>>;
-  isGenerating: boolean;
+  isGenerating: boolean | string;
   reports: GeneratedReport[];
   setReports: React.Dispatch<React.SetStateAction<GeneratedReport[]>>;
   currentReport: GeneratedReport | null;
@@ -85,7 +85,7 @@ interface AppContextType {
   toggleTag: (tag: string) => void;
   setDimensionRating: (dimId: keyof ObservationData['dimensions'], rating: number) => void;
   generatePeriodicReport: (studentOverride?: Student) => Promise<void>;
-  generateReportsForStudents: (studentList: Student[]) => Promise<void>;
+  generateReportsForStudents: (studentList: Student[], sectionId?: string) => Promise<void>;
   refreshData: () => Promise<void>;
   fetchFullReport: (id: string) => Promise<GeneratedReport>;
   loadingReportId: string | null;
@@ -208,7 +208,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     tags: [],
     highlight: '',
   });
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isGenerating, setIsGenerating] = useState<boolean | string>(false);
   const [reports, setReports] = useState<GeneratedReport[]>(INITIAL_REPORTS);
   const [currentReport, setCurrentReport] = useState<GeneratedReport | null>(null);
   const [isEditingReport, setIsEditingReport] = useState(false);
@@ -526,7 +526,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const generatePeriodicReport = async (studentOverride?: Student) => {
     const student = studentOverride || selectedStudent;
     if (!student || !currentTeacher) return;
-    setIsGenerating(true);
+    setIsGenerating(student.id);
 
     try {
       const endDate = selectedDate;
@@ -568,40 +568,56 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
 
 
-  const generateReportsForStudents = async (studentList: Student[]) => {
-    setIsGenerating(true);
+  const generateReportsForStudents = async (studentList: Student[], sectionId?: string) => {
+    setIsGenerating(sectionId || true);
     try {
       const endDate = selectedDate;
       const startDate = subDays(endDate, 13);
       
-      for (const student of studentList) {
+      if (sectionId) {
         const payload = {
-          studentId: student.id,
+          sectionId,
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString()
         };
         
-        try {
-          const res = await fetch(`${API_URL}/api/reports/generate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
+        const res = await fetch(`${API_URL}/api/reports/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        if (!res.ok) {
           const savedReport = await res.json();
-          if (!res.ok) {
-             console.error(`Backend failed for ${student.name}: ${savedReport.message}`);
-             // If it failed for a reason other than "no observations found" (e.g. rate limit), wait a bit
-             if (savedReport.message && !savedReport.message.includes('No observations found')) {
+          alert(`Failed to generate section reports: ${savedReport.message || 'Unknown error'}`);
+        }
+      } else {
+        for (const student of studentList) {
+          const payload = {
+            studentId: student.id,
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString()
+          };
+          
+          try {
+            const res = await fetch(`${API_URL}/api/reports/generate`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            const savedReport = await res.json();
+            if (!res.ok) {
+               console.error(`Backend failed for ${student.name}: ${savedReport.message}`);
+               if (savedReport.message && !savedReport.message.includes('No observations found')) {
+                 await new Promise(resolve => setTimeout(resolve, 4000));
+               }
+            } else {
                await new Promise(resolve => setTimeout(resolve, 4000));
-             }
-          } else {
-             // Successful AI generation, wait 4 seconds to stay under 15 RPM (1 request / 4 seconds)
-             await new Promise(resolve => setTimeout(resolve, 4000));
+            }
+          } catch (e: any) {
+            console.error(`Network or fetch failed for ${student.name}`, e);
+            await new Promise(resolve => setTimeout(resolve, 4000));
           }
-        } catch (e: any) {
-          console.error(`Network or fetch failed for ${student.name}`, e);
-          // Wait on network/fetch failures as well
-          await new Promise(resolve => setTimeout(resolve, 4000));
         }
       }
       await fetchAllData();
